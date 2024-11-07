@@ -14,21 +14,29 @@ echo "Docker daemon is running."
 
 # Set default environment variables
 REGISTRY="${REGISTRY:-ghcr.io}"
-USERNAME="${USERNAME:-HellKaiser45}"
-IMAGE_NAME="${IMAGE_NAME:-version-checker}"
+USERNAME=$(echo "${USERNAME:-HellKaiser45}" | tr '[:upper:]' '[:lower:]')
+IMAGE_NAME=$(echo "${IMAGE_NAME:-version-checker}" | tr '[:upper:]' '[:lower:]')
 GITHUB_TOKEN="${GITHUB_TOKEN:?Error: GITHUB_TOKEN is required}"
-REPO_OWNER="${REPO_OWNER:-}"
-REPO_NAME="${REPO_NAME:-}"
+REPO_OWNER=$(echo "${REPO_OWNER:-$USERNAME}" | tr '[:upper:]' '[:lower:]')
+REPO_NAME=$(echo "${REPO_NAME:-$IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
 DOCKERFILE_PATH="${DOCKERFILE_PATH:?Error: DOCKERFILE_PATH is required}"
-VERSION_FILE_PATH="${VERSION_FILE_PATH:?Error: VERSION_FILE_PATH is required}"
 
-# Read last version from last_commit.txt
-if [ ! -f "$VERSION_FILE_PATH/last_commit.txt" ]; then
-    echo "Error: last_commit.txt not found in $VERSION_FILE_PATH"
-    exit 1
-fi
+# Debug: Print out all relevant paths and variables
+echo "Current working directory: $(pwd)"
+echo "Dockerfile path: $DOCKERFILE_PATH"
+echo "Contents of Dockerfile path:"
+ls -la "$DOCKERFILE_PATH"
 
-CURRENT_VERSION=$(cat "$VERSION_FILE_PATH/last_commit.txt")
+# Fetch the latest version from GitHub releases/tags
+get_latest_version() {
+    local version=$(curl -s \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/tags" | \
+        jq -r '.[0].name // "0.0.0"' | sed 's/^v//')
+
+    echo "$version"
+}
 
 # Increment version
 increment_version() {
@@ -47,10 +55,20 @@ increment_version() {
     echo "${major}.${minor}"
 }
 
+# Get current version
+CURRENT_VERSION=$(get_latest_version)
+
+# Increment version
 NEW_VERSION=$(increment_version "$CURRENT_VERSION")
 
-# Change to the Dockerfile directory
+# Ensure we're in the correct directory
 cd "$DOCKERFILE_PATH"
+
+# Verify Dockerfile exists
+if [ ! -f Dockerfile ]; then
+    echo "Error: Dockerfile not found in $DOCKERFILE_PATH"
+    exit 1
+fi
 
 # Build the Docker image
 docker build -t "${REGISTRY}/${USERNAME}/${IMAGE_NAME}:${NEW_VERSION}" .
@@ -64,9 +82,6 @@ docker push "${REGISTRY}/${USERNAME}/${IMAGE_NAME}:${NEW_VERSION}"
 # Tag and push latest
 docker tag "${REGISTRY}/${USERNAME}/${IMAGE_NAME}:${NEW_VERSION}" "${REGISTRY}/${USERNAME}/${IMAGE_NAME}:latest"
 docker push "${REGISTRY}/${USERNAME}/${IMAGE_NAME}:latest"
-
-# Update last_commit.txt with new version
-echo "$NEW_VERSION" > "$VERSION_FILE_PATH/last_commit.txt"
 
 echo "Image ${REGISTRY}/${USERNAME}/${IMAGE_NAME}:${NEW_VERSION} built and pushed successfully!"
 

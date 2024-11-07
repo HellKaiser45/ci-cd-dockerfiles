@@ -1,7 +1,11 @@
-FROM docker:latest
+FROM alpine:latest
 
-# Install additional tools
-RUN apk add --no-cache \
+# Install necessary tools
+RUN apk update && \
+  apk add --no-cache \
+  docker \
+  docker-cli \
+  docker-compose \
   curl \
   jq \
   git \
@@ -19,5 +23,6 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 VOLUME /var/lib/docker
 EXPOSE 2375
 
+# Set entrypoint
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["docker", "version"]
