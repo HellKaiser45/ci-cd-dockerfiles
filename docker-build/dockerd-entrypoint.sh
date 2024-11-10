@@ -19,13 +19,28 @@ IMAGE_NAME=$(echo "${IMAGE_NAME:-version-checker}" | tr '[:upper:]' '[:lower:]')
 GITHUB_TOKEN="${GITHUB_TOKEN:?Error: GITHUB_TOKEN is required}"
 REPO_OWNER=$(echo "${REPO_OWNER:-$USERNAME}" | tr '[:upper:]' '[:lower:]')
 REPO_NAME=$(echo "${REPO_NAME:-$IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
-DOCKERFILE_PATH="${DOCKERFILE_PATH:?Error: DOCKERFILE_PATH is required}"
+DOCKERFILE_PATH="${DOCKERFILE_PATH:-/workspace}"
 
 # Debug: Print out all relevant paths and variables
 echo "Current working directory: $(pwd)"
 echo "Dockerfile path: $DOCKERFILE_PATH"
 echo "Contents of Dockerfile path:"
 ls -la "$DOCKERFILE_PATH"
+
+# Find Dockerfile
+DOCKERFILE=""
+for dir in "$DOCKERFILE_PATH" "/workspace" "/"; do
+    if [ -f "$dir/Dockerfile" ]; then
+        DOCKERFILE="$dir/Dockerfile"
+        break
+    fi
+done
+
+# Check if Dockerfile was found
+if [ -z "$DOCKERFILE" ]; then
+    echo "Error: Dockerfile not found in $DOCKERFILE_PATH or common locations"
+    exit 1
+fi
 
 # Fetch the latest version from GitHub releases/tags
 get_latest_version() {
@@ -61,17 +76,11 @@ CURRENT_VERSION=$(get_latest_version)
 # Increment version
 NEW_VERSION=$(increment_version "$CURRENT_VERSION")
 
-# Ensure we're in the correct directory
-cd "$DOCKERFILE_PATH"
-
-# Verify Dockerfile exists
-if [ ! -f Dockerfile ]; then
-    echo "Error: Dockerfile not found in $DOCKERFILE_PATH"
-    exit 1
-fi
+# Determine build context
+BUILD_CONTEXT=$(dirname "$DOCKERFILE")
 
 # Build the Docker image
-docker build -t "${REGISTRY}/${USERNAME}/${IMAGE_NAME}:${NEW_VERSION}" .
+docker build -f "$DOCKERFILE" -t "${REGISTRY}/${USERNAME}/${IMAGE_NAME}:${NEW_VERSION}" "$BUILD_CONTEXT"
 
 # Login to container registry
 echo "$GITHUB_TOKEN" | docker login "$REGISTRY" -u "$USERNAME" --password-stdin

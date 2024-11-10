@@ -10,9 +10,6 @@ fi
 # Use OUTPUT_DIR if provided, otherwise default to /workspace
 OUTPUT_DIR="${OUTPUT_DIR:-/workspace}"
 
-# Clean workspace
-rm -rf "$OUTPUT_DIR"/*
-
 # Clone repository
 git clone https://${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/${REPOSITORY_NAME}.git "$OUTPUT_DIR"
 

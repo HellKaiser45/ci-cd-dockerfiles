@@ -5,7 +5,7 @@ set -e
 REGISTRY="${REGISTRY:-ghcr.io}"
 USERNAME="${USERNAME:-HellKaiser45}"  # Converted to lowercase
 IMAGE_NAME="${IMAGE_NAME:-version-checker}"  # Already lowercase
-VERSION="1.0.0"
+VERSION="${VERSION:-1.0.0}"  # Use passed VERSION or default to 1.0.0
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 REPO_OWNER="${REPO_OWNER:-}"
 REPO_NAME="${REPO_NAME:-}"
