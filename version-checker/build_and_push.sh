@@ -1,16 +1,34 @@
 #!/bin/bash
 set -e
 
+# Debug: Print all passed arguments
+echo "All arguments: $@"
+
 # Variables
 REGISTRY="${REGISTRY:-ghcr.io}"
 USERNAME="${USERNAME:-HellKaiser45}"  # Converted to lowercase
-IMAGE_NAME="${IMAGE_NAME:-version-checker}"  # Already lowercase
-VERSION="${VERSION:-1.0.0}"  # Use passed VERSION or default to 1.0.0
-GITHUB_TOKEN="${GITHUB_TOKEN:-}"
-REPO_OWNER="${REPO_OWNER:-}"
-REPO_NAME="${REPO_NAME:-}"
-
 USERNAME=$(echo "$USERNAME" | tr '[:upper:]' '[:lower:]')
+IMAGE_NAME="${IMAGE_NAME:-version-checker}"  # Already lowercase
+VERSION="${VERSION:-1.0.0}"  # Default version
+
+# Debug: Capture GitHub token and version from arguments
+for arg in "$@"; do
+    case "$arg" in
+        GITHUB_TOKEN=*)
+            GITHUB_TOKEN="${arg#*=}"
+            ;;
+        VERSION=*)
+            VERSION="${arg#*=}"
+            ;;
+    esac
+done
+
+# Debug prints
+echo "GitHub Token Length: ${#GITHUB_TOKEN}"
+echo "Version: ${VERSION}"
+
+REPO_OWNER="${USERNAME}"
+REPO_NAME="${REPO_NAME:-ci-cd-dockerfiles}"
 
 # Prepare build command with optional source label
 BUILD_COMMAND="docker build -t ${REGISTRY}/${USERNAME}/${IMAGE_NAME}:${VERSION}"

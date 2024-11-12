@@ -1,7 +1,17 @@
-FROM python:3.10-slim
+FROM ubuntu:22.04
 
-# Install necessary dependencies
-RUN pip install --no-cache-dir \
+# Avoid prompts from apt
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python and pip
+RUN apt-get update && apt-get install -y \
+  python3 \
+  python3-pip \
+  && rm -rf /var/lib/apt/lists/* \
+  && ln -s /usr/bin/python3 /usr/bin/python
+
+# Install necessary Python dependencies
+RUN pip3 install --no-cache-dir \
   requests \
   urllib3
 
@@ -15,5 +25,5 @@ RUN chmod +x /usr/local/bin/version_check.py
 # Set working directory
 WORKDIR /version
 
-# Set the entrypoint to run sysctl and then the script
-ENTRYPOINT ["/bin/sh", "-c", "sysctl -w fs.inotify.max_user_watches=2099999999 && python /usr/local/bin/version_check.py"]
+# Set the entrypoint to run the script with python3
+ENTRYPOINT ["/usr/bin/python3", "/usr/local/bin/version_check.py"]
